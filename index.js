@@ -47,7 +47,7 @@ var Doskara = module.exports = {
           name: 'save',
           module: 'data-store'
         };
-      case 'transform':
+      case 'beforeSave':
         return {
           type: 'json',
           name: 'transform',
@@ -66,8 +66,11 @@ var Doskara = module.exports = {
   },
   trigger: function(e, data) {
     var deferred = Q.defer();
-    var r = request.post('http://' + this.getUrl(e) + '/' + e.name,
-      {form: {data: data}},
+    var r = request({
+      url: 'http://' + this.getUrl(e) + '/' + e.name,
+      body: JSON.stringify({data: data}),
+      method: 'post'
+    },
       function(error, response, body) {
         deferred.resolve(JSON.parse(body).result);
       }    
@@ -112,7 +115,7 @@ function getBody(request) {
         }
       });
       request.on('end', function() {
-        deferred.resolve(qs.parse(body));
+        deferred.resolve(JSON.parse(body));
       });
       return deferred.promise;
     }
