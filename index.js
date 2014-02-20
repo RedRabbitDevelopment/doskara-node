@@ -1,43 +1,53 @@
 
+var http = require('http');
 var Q = require('q');
+var request = require('request');
 var Doskara = module.exports = {
   getUrl: function(e) {
-    return 'localhost:8090';
+    switch(e.module) {
+      case 'project':
+        return 'localhost:8090';
+      case 'data-store':
+        return 'localhost:8095';
+      case 'transformer':
+        return 'localhost:8099';
+    }
   },
   getPath: function(e) {
     return e.path;
-  },
-  trigger: function(e, data) {
-    var deferred = Q.defer();
-    deferred.resolve({
-      name: e.name,
-      query: data.query,
-      body: data.body
-    });
-    return deferred.promise;
   },
   getEvent: function(event_name) {
     switch(event_name) {
       case '404':
         return {
           type: 'html',
-          path: '/404'
+          path: '/404',
+          module: 'project'
         };
       case 'GET:/':
         return {
           type: 'html',
-          path: '/'
+          path: '/',
+          module: 'project'
         };
       case 'GET:/getAll':
         return {
           type: 'json',
-          name: 'getAll'
-       };
+          name: 'getAll',
+          module: 'data-store'
+        };
       case 'POST:/':
         return {
           type: 'json',
-          name: 'save'
-       };
+          name: 'save',
+          module: 'data-store'
+        };
+      case 'transform':
+        return {
+          type: 'json',
+          name: 'transform',
+          module: 'transformer'
+        }
      default:
        return null;
     }
@@ -46,6 +56,54 @@ var Doskara = module.exports = {
   init: function() {
     this.ports.webfront = 8000;
     this.ports.proxy = 8090;
+    this.ports.dataStore = 8095;
+    this.ports.transformer = 8099;
+  },
+  trigger: function(e, data) {
+    var deferred = Q.defer();
+    var r = request.post('http://' + this.getUrl(e) + '/' + name,
+      {form: {data: data}},
+      function(error, response, body) {
+        deferred.resolve(JSON.parse(body));
+      }    
+    );
+    return deferred.promise;
+  },
+  listen: function(port) {
+    var _this = this;
+    http.createServer(function(request, response) {
+      getBody(request).then(function(body) {
+        body = JSON.parse(body);
+        var url_parts = url.parse(request.url, true);
+        var path_name = url_parts.pathname.replace('/', ':');
+        _this.events[path_name](body);
+      });
+    }).listen(port);
+  },
+  events: {},
+  on: function(event_name, callback) {
+    this.events[event_name] = callback;
   }
 };
+function getBody(request) {
+  return Q.fcall(function() {
+    if(request.method === 'POST') {
+      var deferred = Q.defer();
+      var body = '';
+      request.on('data', function(body_part) {
+        body += body_part;
+        if(body.length > 1e6) {
+          body = '';
+          response.writeHead(413, {'Content-Type': 'text/plain'}).end();
+          request.connection.destroy();
+        }
+      });
+      request.on('end', function() {
+        deferred.resolve(qs.parse(body));
+      });
+      return deferred.promise;
+    }
+    return;
+  })
+}
 Doskara.init();
