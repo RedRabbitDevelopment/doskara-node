@@ -19,7 +19,12 @@ var Doskara = module.exports = {
     return e.path;
   },
   triggerEvent: function(event_name, data) {
-    return this.trigger(this.getEvent(event_name), data);
+    var event = this.getEvent(event_name);
+    if(event) {
+      return this.trigger(event, data);
+    } else {
+      return Q.when(true);
+    }
   },
   getEvent: function(event_name) {
     switch(event_name) {
@@ -53,8 +58,13 @@ var Doskara = module.exports = {
           name: 'transform',
           module: 'transformer'
         }
-     default:
-       return null;
+      case 'beforeSave':
+        return {
+          module: 'transformer',
+          name: 'transform'
+        }
+      default:
+        return null;
     }
   },
   ports: {},
