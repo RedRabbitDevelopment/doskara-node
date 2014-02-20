@@ -2,6 +2,8 @@
 var http = require('http');
 var Q = require('q');
 var request = require('request');
+var url = require('url');
+var qs = require('querystring');
 var Doskara = module.exports = {
   getUrl: function(e) {
     switch(e.module) {
@@ -15,6 +17,9 @@ var Doskara = module.exports = {
   },
   getPath: function(e) {
     return e.path;
+  },
+  triggerEvent: function(event_name, data) {
+    return this.trigger(this.getEvent(event_name), data);
   },
   getEvent: function(event_name) {
     switch(event_name) {
@@ -64,7 +69,7 @@ var Doskara = module.exports = {
     var r = request.post('http://' + this.getUrl(e) + '/' + name,
       {form: {data: data}},
       function(error, response, body) {
-        deferred.resolve(JSON.parse(body));
+        deferred.resolve(JSON.parse(body).result);
       }    
     );
     return deferred.promise;
@@ -72,12 +77,20 @@ var Doskara = module.exports = {
   listen: function(port) {
     var _this = this;
     http.createServer(function(request, response) {
-      getBody(request).then(function(body) {
-        body = JSON.parse(body);
-        var url_parts = url.parse(request.url, true);
-        var path_name = url_parts.pathname.replace('/', ':');
-        _this.events[path_name](body);
-      });
+      var url_parts = url.parse(request.url, true);
+      var path_name = url_parts.pathname.substring(1).replace('/', ':');
+      if(request.method === 'POST' && _this.events[path_name]) {
+        getBody(request).then(function(body) {
+          Q.when(_this.events[path_name](body.data)).then(function(result) {
+            response.writeHead(200, {'Content-Type': 'application/json'});
+            response.write(JSON.stringify({result: result}));
+            response.end();
+          });
+        }).done();
+      } else {
+        response.writeHead(404)
+        response.end();
+      }
     }).listen(port);
   },
   events: {},
