@@ -19,12 +19,7 @@ var Doskara = module.exports = {
     return e.path;
   },
   triggerEvent: function(event_name, data) {
-    var event = this.getEvent(event_name);
-    if(event) {
-      return this.trigger(event, data);
-    } else {
-      return Q.when(true);
-    }
+    return this.trigger(this.getEvent(event_name), data);
   },
   getEvent: function(event_name) {
     switch(event_name) {
@@ -58,13 +53,8 @@ var Doskara = module.exports = {
           name: 'transform',
           module: 'transformer'
         }
-      case 'beforeSave':
-        return {
-          module: 'transformer',
-          name: 'transform'
-        }
-      default:
-        return null;
+     default:
+       return null;
     }
   },
   ports: {},
@@ -76,7 +66,7 @@ var Doskara = module.exports = {
   },
   trigger: function(e, data) {
     var deferred = Q.defer();
-    var r = request.post('http://' + this.getUrl(e) + '/' + name,
+    var r = request.post('http://' + this.getUrl(e) + '/' + e.name,
       {form: {data: data}},
       function(error, response, body) {
         deferred.resolve(JSON.parse(body).result);
