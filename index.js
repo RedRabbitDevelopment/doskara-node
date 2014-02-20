@@ -2,7 +2,10 @@
 var Q = require('q');
 var Doskara = module.exports = {
   getUrl: function(e) {
-    return 'localhost:8090' +  e.path;
+    return 'localhost:8090';
+  },
+  getPath: function(e) {
+    return e.path;
   },
   trigger: function(e, data) {
     var deferred = Q.defer();
