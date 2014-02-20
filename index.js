@@ -77,9 +77,9 @@ var Doskara = module.exports = {
     );
     return deferred.promise;
   },
-  listen: function(port) {
+  listen: function(port, callback) {
     var _this = this;
-    http.createServer(function(request, response) {
+    this.server = http.createServer(function(request, response) {
       var url_parts = url.parse(request.url, true);
       var path_name = url_parts.pathname.substring(1).replace('/', ':');
       if(request.method === 'POST' && _this.events[path_name]) {
@@ -94,11 +94,15 @@ var Doskara = module.exports = {
         response.writeHead(404)
         response.end();
       }
-    }).listen(port);
+    });
+    this.server.listen(port, callback);
   },
   events: {},
   on: function(event_name, callback) {
     this.events[event_name] = callback;
+  },
+  stop: function(cb) {
+    this.server.close(cb);
   }
 };
 function getBody(request) {
